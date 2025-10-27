@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
+kkfrom flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -17,12 +17,18 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # Database configuration for production/development
-if os.environ.get('RENDER'):
+database_url = os.environ.get('DATABASE_URL')
+
+if database_url:
     # Production database (Render provides DATABASE_URL)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print("✅ Using PostgreSQL database")
 else:
     # Development database
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freefire_diamonds.db'
+    print("✅ Using SQLite database")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -414,7 +420,6 @@ def user_balance():
     return jsonify({'balance': current_user.balance})
 
 # Admin Routes
-# In the admin_dashboard route, add this before the return statement:
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
@@ -443,7 +448,6 @@ def admin_dashboard():
                          payment_methods=payment_methods, 
                          orders=orders,
                          stats=stats)
-
 
 @app.route('/admin/payment-data')
 @admin_required
