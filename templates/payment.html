@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Order Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Order Summary</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5>{{ package.name }}</h5>
+                            <p class="text-muted mb-0">{{ package.description }}</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="h4 text-success mb-1">${{ package.price }}</div>
+                            <div class="h5 text-primary">
+                                {{ package.diamonds }} <i class="fas fa-gem text-warning"></i>
+                            </div>
+                            {% if package.discount %}
+                            <small class="text-danger">Save {{ package.discount }}%</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Payment Method</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Saved Cards -->
+                    {% if payment_methods %}
+                    <div class="mb-4">
+                        <h6>Saved Payment Methods</h6>
+                        {% for method in payment_methods %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="paymentMethod" 
+                                   id="method{{ method.id }}" value="{{ method.id }}"
+                                   {% if method.is_default %}checked{% endif %}>
+                            <label class="form-check-label" for="method{{ method.id }}">
+                                <i class="fab fa-cc-{{ method.card_type.lower() if method.card_type != 'unknown' else 'credit-card' }} me-2"></i>
+                                {{ method.card_type|title }} •••• {{ method.last_four }}
+                                {% if method.is_default %}<span class="badge bg-primary ms-2">Default</span>{% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <hr>
+                    {% endif %}
+
+                    <!-- New Card Option -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="paymentMethod" 
+                               id="newCard" value="new" {% if not payment_methods %}checked{% endif %}>
+                        <label class="form-check-label" for="newCard">
+                            Use new credit card
+                        </label>
+                    </div>
+
+                    <!-- New Card Form -->
+                    <div id="newCardForm" {% if payment_methods %}style="display: none;"{% endif %}>
+                        <form id="paymentForm">
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Cardholder Name</label>
+                                    <input type="text" class="form-control" name="card_holder_name" required>
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label class="form-label">Card Number</label>
+                                    <input type="text" class="form-control" name="card_number" 
+                                           placeholder="1234 5678 9012 3456" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Expiry Date</label>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <select class="form-select" name="expiry_month" required>
+                                                <option value="">MM</option>
+                                                {% for month in range(1, 13) %}
+                                                <option value="{{ month }}">{{ "%02d"|format(month) }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <select class="form-select" name="expiry_year" required>
+                                                <option value="">YYYY</option>
+                                                {% for year in range(2024, 2035) %}
+                                                <option value="{{ year }}">{{ year }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">CVV</label>
+                                    <input type="text" class="form-control" name="cvv" 
+                                           placeholder="123" required maxlength="4">
+                                </div>
+                            </div>
+                            <div class="form-check mb-4">
+                                <input class="form-check-input" type="checkbox" name="save_card" id="saveCard">
+                                <label class="form-check-label" for="saveCard">
+                                    Save this card for future purchases
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Pay Button -->
+                    <div class="d-grid">
+                        <button class="btn btn-primary btn-lg" onclick="processPayment()">
+                            <i class="fas fa-lock me-2"></i>
+                            Pay ${{ package.price }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle new card form
+document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const newCardForm = document.getElementById('newCardForm');
+        if (this.value === 'new') {
+            newCardForm.style.display = 'block';
+        } else {
+            newCardForm.style.display = 'none';
+        }
+    });
+});
+
+async function processPayment() {
+    const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked');
+    
+    if (!selectedMethod) {
+        alert('Please select a payment method');
+        return;
+    }
+
+    const packageId = {{ package.id }};
+    let paymentData = {};
+
+    if (selectedMethod.value === 'new') {
+        // Validate new card form
+        const form = document.getElementById('paymentForm');
+        const formData = new FormData(form);
+        
+        paymentData = {
+            use_saved_card: false,
+            card_holder_name: formData.get('card_holder_name'),
+            card_number: formData.get('card_number'),
+            expiry_month: parseInt(formData.get('expiry_month')),
+            expiry_year: parseInt(formData.get('expiry_year')),
+            cvv: formData.get('cvv'),
+            save_card: document.getElementById('saveCard').checked
+        };
+
+        // First validate/save the card if requested
+        if (paymentData.save_card) {
+            const saveResponse = await fetch('/api/add-payment-method', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(paymentData)
+            });
+            
+            const saveResult = await saveResponse.json();
+            if (saveResult.status !== 'success') {
+                alert('Error saving card: ' + saveResult.message);
+                return;
+            }
+        }
+    } else {
+        paymentData = {
+            use_saved_card: true,
+            payment_method_id: parseInt(selectedMethod.value)
+        };
+    }
+
+    // Process the order
+    try {
+        const response = await fetch('/api/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                package_id: packageId,
+                ...paymentData
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            alert(result.message);
+            window.location.href = '/dashboard';
+        } else {
+            alert('Payment failed: ' + result.message);
+        }
+    } catch (error) {
+        alert('Payment error: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

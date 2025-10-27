@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h1><i class="fas fa-shield-alt me-2"></i>Admin Dashboard</h1>
+            <p class="text-muted">Research and monitoring interface</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5>Total Users</h5>
+                    <h2>{{ stats.total_users }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5>Payment Methods</h5>
+                    <h2>{{ stats.total_payment_methods }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5>Total Orders</h5>
+                    <h2>{{ stats.total_orders }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5>Total Revenue</h5>
+                    <h2>${{ "%.2f"|format(stats.total_revenue) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Research Tools -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Research Tools</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="loadAllPaymentData()">
+                            <i class="fas fa-database me-1"></i>Load All Payment Data
+                        </button>
+                        <button class="btn btn-success" onclick="exportData('csv')">
+                            <i class="fas fa-file-csv me-1"></i>Export CSV
+                        </button>
+                        <button class="btn btn-info" onclick="exportData('json')">
+                            <i class="fas fa-file-code me-1"></i>Export JSON
+                        </button>
+                        <button class="btn btn-warning" onclick="getSystemStats()">
+                            <i class="fas fa-chart-bar me-1"></i>System Stats
+                        </button>
+                        <button class="btn btn-danger" onclick="findDuplicateCards()">
+                            <i class="fas fa-copy me-1"></i>Find Duplicates
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Stored Payment Methods ({{ payment_methods|length }})</h5>
+                    <button class="btn btn-sm btn-primary" onclick="loadAllPaymentMethods()">
+                        <i class="fas fa-sync me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>Card Type</th>
+                                    <th>Last Four</th>
+                                    <th>Expiry</th>
+                                    <th>Default</th>
+                                    <th>Added</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for method in payment_methods %}
+                                <tr>
+                                    <td>{{ method.id }}</td>
+                                    <td>
+                                        {% set user = users|selectattr("id", "equalto", method.user_id)|first %}
+                                        {{ user.username if user else 'N/A' }}
+                                    </td>
+                                    <td>
+                                        <i class="fab fa-cc-{{ method.card_type.lower() if method.card_type != 'unknown' else 'credit-card' }} me-1"></i>
+                                        {{ method.card_type|title }}
+                                    </td>
+                                    <td>•••• {{ method.last_four }}</td>
+                                    <td>{{ method.expiry_month }}/{{ method.expiry_year }}</td>
+                                    <td>
+                                        {% if method.is_default %}
+                                        <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ method.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" onclick="decryptMethod({{ method.id }})">
+                                            <i class="fas fa-key me-1"></i>Decrypt
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Research Results Modal -->
+    <div class="modal fade" id="researchModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="researchModalTitle">Research Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <pre id="researchResult" class="bg-light p-3 rounded" style="max-height: 60vh; overflow-y: auto;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadAllPaymentData() {
+    try {
+        const response = await fetch('/admin/payment-data');
+        const data = await response.json();
+        showResearchResult('All Payment Data', JSON.stringify(data, null, 2));
+    } catch (error) {
+        alert('Error loading payment data: ' + error.message);
+    }
+}
+
+async function exportData(format) {
+    window.open(`/admin/export-data?format=${format}`, '_blank');
+}
+
+async function getSystemStats() {
+    try {
+        const response = await fetch('/admin/system-stats');
+        const data = await response.json();
+        showResearchResult('System Statistics', JSON.stringify(data, null, 2));
+    } catch (error) {
+        alert('Error loading stats: ' + error.message);
+    }
+}
+
+async function findDuplicateCards() {
+    try {
+        const response = await fetch('/admin/duplicate-cards');
+        const data = await response.json();
+        showResearchResult('Duplicate Cards', JSON.stringify(data, null, 2));
+    } catch (error) {
+        alert('Error finding duplicates: ' + error.message);
+    }
+}
+
+async function decryptMethod(methodId) {
+    try {
+        const response = await fetch(`/admin/decrypt-payment/${methodId}`);
+        const result = await response.json();
+        
+        if (result.error) {
+            alert('Error: ' + result.error);
+            return;
+        }
+        
+        showResearchResult(`Decrypted Card #${methodId}`, JSON.stringify(result, null, 2));
+    } catch (error) {
+        alert('Error decrypting: ' + error.message);
+    }
+}
+
+function showResearchResult(title, content) {
+    document.getElementById('researchModalTitle').textContent = title;
+    document.getElementById('researchResult').textContent = content;
+    new bootstrap.Modal(document.getElementById('researchModal')).show();
+}
+</script>
+{% endblock %}

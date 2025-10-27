@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Welcome Card -->
+            <div class="card bg-primary text-white mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3>Welcome back, {{ current_user.username }}!</h3>
+                            <p class="mb-0">Your Free Fire ID: <strong>{{ current_user.freefire_id }}</strong></p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="display-4">{{ current_user.balance }}</div>
+                            <small>Diamonds Balance</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-shopping-cart fa-3x text-primary mb-3"></i>
+                            <h5>Buy Diamonds</h5>
+                            <p class="text-muted">Purchase more diamonds for your account</p>
+                            <a href="{{ url_for('packages') }}" class="btn btn-primary">View Packages</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card text-center h-100">
+                        <div class="card-body">
+                            <i class="fas fa-credit-card fa-3x text-success mb-3"></i>
+                            <h5>Payment Methods</h5>
+                            <p class="text-muted">Manage your saved payment methods</p>
+                            <a href="{{ url_for('payment_methods') }}" class="btn btn-success">Manage Cards</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Orders</h5>
+                </div>
+                <div class="card-body">
+                    {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Package</th>
+                                    <th>Diamonds</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td><small>{{ order.id[:8] }}...</small></td>
+                                    <td>{{ order.package.name }}</td>
+                                    <td>
+                                        <strong>{{ order.diamonds }}</strong>
+                                        <i class="fas fa-gem text-warning ms-1"></i>
+                                    </td>
+                                    <td>${{ "%.2f"|format(order.amount) }}</td>
+                                    <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if order.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">{{ order.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No orders yet</h5>
+                        <p class="text-muted">Make your first diamond purchase to get started!</p>
+                        <a href="{{ url_for('packages') }}" class="btn btn-primary">Buy Diamonds</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Payment Methods Summary -->
+            {% if payment_methods %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Saved Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for method in payment_methods %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card {% if method.is_default %}border-primary{% endif %}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="card-title mb-1">
+                                                <i class="fab fa-cc-{{ method.card_type.lower() if method.card_type != 'unknown' else 'credit-card' }} me-2"></i>
+                                                {{ method.card_type|title }} •••• {{ method.last_four }}
+                                            </h6>
+                                            <p class="text-muted mb-0 small">
+                                                Expires: {{ method.expiry_month }}/{{ method.expiry_year }}
+                                                {% if method.is_default %}
+                                                <span class="badge bg-primary ms-2">Default</span>
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('payment_methods') }}" class="btn btn-outline-primary btn-sm">
+                            Manage Payment Methods
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
