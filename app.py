@@ -1,10 +1,7 @@
-kkfrom flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, abort
 from flask_login import LoginManager, current_user, login_user, logout_user, login_required
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from models import db, User, DiamondPackage, Order, PaymentMethod
-from payment_processor import payment_processor
-from research_tools import ResearchTools
 import os
 from datetime import datetime
 from cryptography.fernet import Fernet
@@ -16,21 +13,28 @@ app = Flask(__name__)
 # Production configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
-# Database configuration for production/development
+# Database configuration - FIXED for Render
 database_url = os.environ.get('DATABASE_URL')
 
 if database_url:
     # Production database (Render provides DATABASE_URL)
+    print(f"📊 DATABASE_URL found: {database_url[:50]}...")  # Log first 50 chars
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        print("🔄 Converted postgres:// to postgresql://")
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     print("✅ Using PostgreSQL database")
 else:
     # Development database
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freefire_diamonds.db'
-    print("✅ Using SQLite database")
+    print("✅ Using SQLite database (development)")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Import models after app configuration to avoid circular imports
+from models import db, User, DiamondPackage, Order, PaymentMethod
+from payment_processor import payment_processor
+from research_tools import ResearchTools
 
 # Initialize extensions
 db.init_app(app)
