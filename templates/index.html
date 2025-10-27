@@ -1,126 +1,148 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Fire Diamonds - Buy Cheap Diamonds</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Free Fire Diamonds</h2>
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link active">Home</a>
+                <a href="{{ url_for('packages') }}" class="nav-link">Packages</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                    <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                    <a href="{{ url_for('register') }}" class="nav-link">Register</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
 
-{% block content %}
-<!-- Hero Section -->
-<section class="hero-section text-white py-5">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <h1 class="display-4 fw-bold mb-4">Buy Free Fire Diamonds</h1>
-                <p class="lead mb-4">Get the cheapest and safest Free Fire diamonds with instant delivery. Level up your gaming experience today!</p>
-                <div class="d-flex gap-3">
-                    {% if current_user.is_authenticated %}
-                    <a href="{{ url_for('packages') }}" class="btn btn-warning btn-lg">
-                        <i class="fas fa-shopping-cart me-2"></i>Buy Diamonds
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg">
-                        <i class="fas fa-user-plus me-2"></i>Get Started
-                    </a>
-                    <a href="{{ url_for('packages') }}" class="btn btn-outline-light btn-lg">
-                        View Packages
-                    </a>
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">Buy Free Fire Diamonds</h1>
+                <p class="hero-subtitle">Instant Delivery • Best Prices • 24/7 Support</p>
+                <p class="hero-description">
+                    Get the best deals on Free Fire diamonds with instant delivery to your account. 
+                    Competitive prices in both USD and Naira.
+                </p>
+                <div class="hero-actions">
+                    <a href="{{ url_for('packages') }}" class="btn btn-primary">View Packages</a>
+                    {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('register') }}" class="btn btn-secondary">Create Account</a>
                     {% endif %}
                 </div>
             </div>
-            <div class="col-lg-6 text-center">
-                <div class="hero-image">
-                    <i class="fas fa-gem display-1 text-warning"></i>
-                </div>
-            </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Features Section -->
-<section class="py-5">
-    <div class="container">
-        <div class="row text-center mb-5">
-            <div class="col">
-                <h2 class="fw-bold">Why Choose Us?</h2>
-                <p class="text-muted">The best platform for Free Fire diamonds</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-4 text-center mb-4">
-                <div class="feature-icon bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                    <i class="fas fa-bolt fa-2x"></i>
-                </div>
-                <h4>Instant Delivery</h4>
-                <p class="text-muted">Diamonds delivered to your account within seconds after payment</p>
-            </div>
-            <div class="col-md-4 text-center mb-4">
-                <div class="feature-icon bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                    <i class="fas fa-shield-alt fa-2x"></i>
-                </div>
-                <h4>100% Safe</h4>
-                <p class="text-muted">Secure payment and guaranteed account safety</p>
-            </div>
-            <div class="col-md-4 text-center mb-4">
-                <div class="feature-icon bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                    <i class="fas fa-tag fa-2x"></i>
-                </div>
-                <h4>Best Prices</h4>
-                <p class="text-muted">Lowest prices with regular discounts and offers</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Popular Packages Section -->
-<section class="py-5 bg-light">
-    <div class="container">
-        <div class="row text-center mb-5">
-            <div class="col">
-                <h2 class="fw-bold">Popular Diamond Packages</h2>
-                <p class="text-muted">Choose from our best-selling packages</p>
-            </div>
-        </div>
-        <div class="row">
-            {% for package in packages %}
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card package-card h-100 {% if package.popular %}popular{% endif %}">
+    <section class="featured-packages">
+        <div class="container">
+            <h2 class="section-title">Featured Packages</h2>
+            <div class="packages-grid">
+                {% for package in packages %}
+                <div class="package-card {% if package.popular %}popular{% endif %}">
                     {% if package.popular %}
-                    <div class="popular-badge">MOST POPULAR</div>
+                    <div class="popular-badge">POPULAR</div>
                     {% endif %}
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ package.name }}</h5>
-                        <div class="diamond-count display-6 fw-bold text-primary my-3">
-                            {{ package.diamonds }} <i class="fas fa-gem text-warning"></i>
+                    
+                    <div class="package-header">
+                        <h3 class="package-name">{{ package.name }}</h3>
+                        <div class="diamonds-count">{{ package.diamonds }} 💎</div>
+                    </div>
+
+                    <div class="package-pricing">
+                        <div class="price-section">
+                            <div class="currency-label">USD</div>
+                            <div class="price-usd">
+                                <span class="current-price">${{ "%.2f"|format(package.price) }}</span>
+                                {% if package.original_price > package.price %}
+                                <span class="original-price">${{ "%.2f"|format(package.original_price) }}</span>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="price-section mb-3">
-                            {% if package.original_price %}
-                            <span class="original-price text-muted text-decoration-line-through me-2">
-                                ${{ package.original_price }}
-                            </span>
-                            {% endif %}
-                            <span class="current-price h4 text-success">${{ package.price }}</span>
-                            {% if package.discount %}
-                            <span class="discount-badge bg-danger text-white small px-2 py-1 rounded ms-2">
-                                {{ package.discount }}% OFF
-                            </span>
-                            {% endif %}
+
+                        <div class="price-section">
+                            <div class="currency-label">Naira</div>
+                            <div class="price-ngn">
+                                <strong class="current-price">{{ usd_to_ngn(package.price) }}</strong>
+                                {% if package.original_price > package.price %}
+                                <span class="original-price">{{ usd_to_ngn(package.original_price) }}</span>
+                                {% endif %}
+                            </div>
                         </div>
-                        <p class="card-text text-muted">{{ package.description }}</p>
+                    </div>
+
+                    {% if package.discount > 0 %}
+                    <div class="discount-badge">
+                        {{ package.discount }}% OFF
+                    </div>
+                    {% endif %}
+
+                    <p class="package-description">{{ package.description }}</p>
+
+                    <div class="package-actions">
                         {% if current_user.is_authenticated %}
-                        <a href="{{ url_for('package_detail', package_id=package.id) }}" class="btn btn-primary w-100">
-                            <i class="fas fa-shopping-cart me-2"></i>Buy Now
-                        </a>
+                            <a href="{{ url_for('package_detail', package_id=package.id) }}" class="btn btn-primary">
+                                Get Diamonds
+                            </a>
                         {% else %}
-                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary w-100">
-                            <i class="fas fa-sign-in-alt me-2"></i>Login to Buy
-                        </a>
+                            <a href="{{ url_for('login') }}" class="btn btn-secondary">
+                                Login to Buy
+                            </a>
                         {% endif %}
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+
+            <div class="view-all">
+                <a href="{{ url_for('packages') }}" class="btn btn-outline">View All Packages</a>
+            </div>
         </div>
-        <div class="text-center mt-4">
-            <a href="{{ url_for('packages') }}" class="btn btn-outline-primary btn-lg">
-                View All Packages <i class="fas fa-arrow-right ms-2"></i>
-            </a>
+    </section>
+
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Why Choose Us?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Delivery</h3>
+                    <p>Diamonds delivered to your account within seconds after payment</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Secure Payments</h3>
+                    <p>Your payment information is encrypted and secure</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💰</div>
+                    <h3>Best Prices</h3>
+                    <p>Competitive pricing in both USD and Nigerian Naira</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📞</div>
+                    <h3>24/7 Support</h3>
+                    <p>Round-the-clock customer support for all your needs</p>
+                </div>
+            </div>
         </div>
-    </div>
-</section>
-{% endblock %}
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Free Fire Diamonds. Not affiliated with Garena. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

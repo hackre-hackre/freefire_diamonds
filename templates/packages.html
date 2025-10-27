@@ -1,86 +1,99 @@
-{% extends "base.html" %}
-
-{% block content %}
-<!-- Packages Header -->
-<section class="py-5 bg-primary text-white">
-    <div class="container">
-        <div class="row">
-            <div class="col text-center">
-                <h1 class="display-4 fw-bold">Diamond Packages</h1>
-                <p class="lead">Choose the perfect diamond package for your gaming needs</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Packages - Free Fire Diamonds</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Free Fire Diamonds</h2>
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('packages') }}" class="nav-link active">Packages</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                    <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+                    <a href="{{ url_for('register') }}" class="nav-link">Register</a>
+                {% endif %}
             </div>
         </div>
-    </div>
-</section>
+    </nav>
 
-<!-- All Packages -->
-<section class="py-5">
     <div class="container">
-        <div class="row">
+        <h1 class="page-title">Diamond Packages</h1>
+        <p class="page-subtitle">Choose the perfect diamond package for your gaming needs</p>
+
+        <div class="packages-grid">
             {% for package in packages %}
-            <div class="col-xl-4 col-lg-6 mb-4">
-                <div class="card package-card h-100 {% if package.popular %}popular{% endif %}">
-                    {% if package.popular %}
-                    <div class="popular-badge">MOST POPULAR</div>
-                    {% endif %}
-                    <div class="card-body text-center p-4">
-                        <h4 class="card-title fw-bold">{{ package.name }}</h4>
-                        <div class="diamond-count display-4 fw-bold text-primary my-4">
-                            {{ package.diamonds }} <i class="fas fa-gem text-warning"></i>
-                        </div>
-                        <div class="price-section mb-4">
-                            {% if package.original_price %}
-                            <div class="original-price text-muted text-decoration-line-through h5">
-                                ${{ package.original_price }}
-                            </div>
-                            {% endif %}
-                            <div class="current-price h2 text-success fw-bold">${{ package.price }}</div>
-                            {% if package.discount %}
-                            <span class="discount-badge bg-danger text-white px-3 py-2 rounded">
-                                SAVE {{ package.discount }}%
-                            </span>
-                            {% endif %}
-                        </div>
-                        <p class="card-text text-muted mb-4">{{ package.description }}</p>
-                        <div class="d-grid">
-                            {% if current_user.is_authenticated %}
-                            <a href="{{ url_for('package_detail', package_id=package.id) }}" class="btn btn-primary btn-lg">
-                                <i class="fas fa-shopping-cart me-2"></i>Buy Now
-                            </a>
-                            {% else %}
-                            <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
-                                <i class="fas fa-sign-in-alt me-2"></i>Login to Purchase
-                            </a>
+            <div class="package-card {% if package.popular %}popular{% endif %}">
+                {% if package.popular %}
+                <div class="popular-badge">MOST POPULAR</div>
+                {% endif %}
+                
+                <div class="package-header">
+                    <h3 class="package-name">{{ package.name }}</h3>
+                    <div class="diamonds-count">{{ package.diamonds }} Diamonds</div>
+                </div>
+
+                <div class="package-pricing">
+                    <!-- USD Pricing -->
+                    <div class="price-section">
+                        <div class="currency-label">USD</div>
+                        <div class="price-usd">
+                            <span class="current-price">${{ "%.2f"|format(package.price) }}</span>
+                            {% if package.original_price > package.price %}
+                            <span class="original-price">${{ "%.2f"|format(package.original_price) }}</span>
                             {% endif %}
                         </div>
                     </div>
+
+                    <!-- Naira Pricing -->
+                    <div class="price-section">
+                        <div class="currency-label">Naira</div>
+                        <div class="price-ngn">
+                            <strong class="current-price">{{ usd_to_ngn(package.price) }}</strong>
+                            {% if package.original_price > package.price %}
+                            <span class="original-price">{{ usd_to_ngn(package.original_price) }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if package.discount > 0 %}
+                <div class="discount-badge">
+                    SAVE {{ package.discount }}%
+                </div>
+                {% endif %}
+
+                <p class="package-description">{{ package.description }}</p>
+
+                <div class="package-actions">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('package_detail', package_id=package.id) }}" class="btn btn-primary">
+                            Buy Now
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-secondary">
+                            Login to Purchase
+                        </a>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
         </div>
     </div>
-</section>
 
-<!-- Guarantee Section -->
-<section class="py-5 bg-light">
-    <div class="container">
-        <div class="row text-center">
-            <div class="col-md-4 mb-4">
-                <i class="fas fa-lock fa-3x text-success mb-3"></i>
-                <h4>Secure Payment</h4>
-                <p class="text-muted">All payments are encrypted and secure</p>
-            </div>
-            <div class="col-md-4 mb-4">
-                <i class="fas fa-rocket fa-3x text-primary mb-3"></i>
-                <h4>Instant Delivery</h4>
-                <p class="text-muted">Diamonds delivered within 5 minutes</p>
-            </div>
-            <div class="col-md-4 mb-4">
-                <i class="fas fa-headset fa-3x text-warning mb-3"></i>
-                <h4>24/7 Support</h4>
-                <p class="text-muted">Round-the-clock customer support</p>
-            </div>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Free Fire Diamonds. All rights reserved.</p>
         </div>
-    </div>
-</section>
-{% endblock %}
+    </footer>
+</body>
+</html>

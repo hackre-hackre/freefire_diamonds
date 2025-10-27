@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Free Fire Diamonds</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .admin-container {
+            padding: 2rem 0;
+        }
+        
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .admin-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .admin-section h3 {
+            margin-bottom: 1.5rem;
+            color: #333;
+            border-bottom: 2px solid #f8f9fa;
+            padding-bottom: 0.5rem;
+        }
+        
+        .admin-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .admin-btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .admin-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .admin-btn.danger {
+            background: #e74c3c;
+        }
+        
+        .admin-btn.danger:hover {
+            background: #c0392b;
+        }
+        
+        .admin-btn.success {
+            background: #27ae60;
+        }
+        
+        .admin-btn.success:hover {
+            background: #219a52;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        .user-row, .order-row, .payment-row {
+            transition: background-color 0.3s;
+        }
+        
+        .user-row:hover, .order-row:hover, .payment-row:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .status-completed {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .status-failed {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .admin-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Free Fire Diamonds - Admin</h2>
+            </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('admin_dashboard') }}" class="nav-link active">Admin Dashboard</a>
+                <a href="{{ url_for('dashboard') }}" class="nav-link">User Dashboard</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="admin-header">
+            <h1>Admin Dashboard</h1>
+            <p>System Overview & Management</p>
+        </div>
+
+        <!-- Statistics -->
+        <div class="admin-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.total_users }}</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.total_orders }}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${{ "%.2f"|format(stats.total_revenue) }}</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ stats.total_payment_methods }}</div>
+                <div class="stat-label">Payment Methods</div>
+            </div>
+        </div>
+
+        <!-- Admin Actions -->
+        <div class="admin-actions">
+            <a href="{{ url_for('admin_payment_data') }}" class="admin-btn" target="_blank">View Payment Data</a>
+            <a href="{{ url_for('admin_export_data') }}?format=json" class="admin-btn">Export JSON</a>
+            <a href="{{ url_for('admin_export_data') }}?format=csv" class="admin-btn">Export CSV</a>
+            <a href="{{ url_for('admin_system_stats') }}" class="admin-btn" target="_blank">System Stats</a>
+            <a href="{{ url_for('admin_duplicate_cards') }}" class="admin-btn" target="_blank">Duplicate Cards</a>
+            <a href="{{ url_for('admin_all_users_analytics') }}" class="admin-btn" target="_blank">All Users Analytics</a>
+        </div>
+
+        <!-- Users Section -->
+        <div class="admin-section">
+            <h3>Registered Users ({{ users|length }})</h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>FreeFire ID</th>
+                            <th>Balance</th>
+                            <th>Admin</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr class="user-row">
+                            <td>{{ user.id }}</td>
+                            <td>
+                                {{ user.username }}
+                                {% if user.is_admin %}<span class="admin-badge">ADMIN</span>{% endif %}
+                            </td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.freefire_id }}</td>
+                            <td>{{ user.balance }} 💎</td>
+                            <td>{{ "Yes" if user.is_admin else "No" }}</td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_user_analytics', user_id=user.id) }}" class="admin-btn" target="_blank">Analytics</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="admin-section">
+            <h3>Recent Orders ({{ orders|length }})</h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>User</th>
+                            <th>Package</th>
+                            <th>Diamonds</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Payment Method</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr class="order-row">
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.user.username }} (ID: {{ order.user.id }})</td>
+                            <td>{{ order.package.name }}</td>
+                            <td>{{ order.diamonds }} 💎</td>
+                            <td>${{ "%.2f"|format(order.amount) }}</td>
+                            <td class="status-{{ order.status }}">{{ order.status|upper }}</td>
+                            <td>{{ order.payment_method or 'N/A' }}</td>
+                            <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if order.payment_method_id %}
+                                <a href="{{ url_for('admin_decrypt_payment', method_id=order.payment_method_id) }}" class="admin-btn" target="_blank">View Payment</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="admin-section">
+            <h3>Payment Methods ({{ payment_methods|length }})</h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Card Type</th>
+                            <th>Last Four</th>
+                            <th>Card Holder</th>
+                            <th>Expiry</th>
+                            <th>Default</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for method in payment_methods %}
+                        <tr class="payment-row">
+                            <td>{{ method.id }}</td>
+                            <td>{{ method.user.username }} (ID: {{ method.user.id }})</td>
+                            <td>{{ method.card_type|upper }}</td>
+                            <td>**** {{ method.last_four }}</td>
+                            <td>{{ method.card_holder_name }}</td>
+                            <td>{{ method.expiry_month }}/{{ method.expiry_year }}</td>
+                            <td>{{ "Yes" if method.is_default else "No" }}</td>
+                            <td>{{ method.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_decrypt_payment', method_id=method.id) }}" class="admin-btn" target="_blank">Decrypt</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Information -->
+        <div class="admin-section">
+            <h3>System Information</h3>
+            <div class="system-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Completed Orders:</strong> {{ stats.completed_orders }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Pending Orders:</strong> {{ stats.pending_orders }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Average Order Value:</strong> ${{ "%.2f"|format(stats.avg_order_value) }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Total Diamonds Sold:</strong> {{ stats.total_diamonds_sold }} 💎
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Free Fire Diamonds - Admin Panel. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-refresh stats every 30 seconds
+        setInterval(() => {
+            fetch('/admin/system-stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update stats cards
+                    document.querySelectorAll('.stat-number')[0].textContent = data.total_users;
+                    document.querySelectorAll('.stat-number')[1].textContent = data.total_orders;
+                    document.querySelectorAll('.stat-number')[2].textContent = '$' + data.total_revenue.toFixed(2);
+                    document.querySelectorAll('.stat-number')[3].textContent = data.total_payment_methods;
+                });
+        }, 30000);
+
+        // Add confirmation for sensitive actions
+        document.addEventListener('DOMContentLoaded', function() {
+            const dangerButtons = document.querySelectorAll('.admin-btn.danger');
+            dangerButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    if (!confirm('Are you sure you want to perform this action? This cannot be undone.')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

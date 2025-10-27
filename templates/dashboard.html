@@ -1,142 +1,401 @@
-{% extends "base.html" %}
-
-{% block content %}
-<div class="container py-5">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <!-- Welcome Card -->
-            <div class="card bg-primary text-white mb-4">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h3>Welcome back, {{ current_user.username }}!</h3>
-                            <p class="mb-0">Your Free Fire ID: <strong>{{ current_user.freefire_id }}</strong></p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <div class="display-4">{{ current_user.balance }}</div>
-                            <small>Diamonds Balance</small>
-                        </div>
-                    </div>
-                </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Free Fire Diamonds</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .dashboard-container {
+            padding: 2rem 0;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .user-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .dashboard-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-section h3 {
+            margin-bottom: 1.5rem;
+            color: #333;
+            border-bottom: 2px solid #f8f9fa;
+            padding-bottom: 0.5rem;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .user-btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .user-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .order-status-completed {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .order-status-pending {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        
+        .order-status-failed {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .payment-method-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .payment-method-card:hover {
+            border-color: #667eea;
+        }
+        
+        .method-info {
+            flex: 1;
+        }
+        
+        .card-type {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .card-number {
+            color: #666;
+            margin: 0.5rem 0;
+        }
+        
+        .card-details {
+            display: flex;
+            gap: 2rem;
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        .default-badge {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 1rem;
+        }
+        
+        .method-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Free Fire Diamonds</h2>
             </div>
-
-            <!-- Quick Actions -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card text-center h-100">
-                        <div class="card-body">
-                            <i class="fas fa-shopping-cart fa-3x text-primary mb-3"></i>
-                            <h5>Buy Diamonds</h5>
-                            <p class="text-muted">Purchase more diamonds for your account</p>
-                            <a href="{{ url_for('packages') }}" class="btn btn-primary">View Packages</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card text-center h-100">
-                        <div class="card-body">
-                            <i class="fas fa-credit-card fa-3x text-success mb-3"></i>
-                            <h5>Payment Methods</h5>
-                            <p class="text-muted">Manage your saved payment methods</p>
-                            <a href="{{ url_for('payment_methods') }}" class="btn btn-success">Manage Cards</a>
-                        </div>
-                    </div>
-                </div>
+            <div class="nav-menu">
+                <a href="{{ url_for('index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('packages') }}" class="nav-link">Packages</a>
+                <a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a>
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin_dashboard') }}" class="nav-link">Admin</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
             </div>
+        </div>
+    </nav>
 
-            <!-- Recent Orders -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Orders</h5>
-                </div>
-                <div class="card-body">
-                    {% if orders %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Order ID</th>
-                                    <th>Package</th>
-                                    <th>Diamonds</th>
-                                    <th>Amount</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for order in orders %}
-                                <tr>
-                                    <td><small>{{ order.id[:8] }}...</small></td>
-                                    <td>{{ order.package.name }}</td>
-                                    <td>
-                                        <strong>{{ order.diamonds }}</strong>
-                                        <i class="fas fa-gem text-warning ms-1"></i>
-                                    </td>
-                                    <td>${{ "%.2f"|format(order.amount) }}</td>
-                                    <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
-                                    <td>
-                                        {% if order.status == 'completed' %}
-                                        <span class="badge bg-success">Completed</span>
-                                        {% else %}
-                                        <span class="badge bg-warning">{{ order.status|title }}</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No orders yet</h5>
-                        <p class="text-muted">Make your first diamond purchase to get started!</p>
-                        <a href="{{ url_for('packages') }}" class="btn btn-primary">Buy Diamonds</a>
-                    </div>
-                    {% endif %}
-                </div>
+    <div class="container dashboard-container">
+        <div class="dashboard-header">
+            <h1>Welcome, {{ current_user.username }}! 👋</h1>
+            <p>Manage your diamonds and payment methods</p>
+        </div>
+
+        <!-- User Statistics -->
+        <div class="user-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ current_user.balance }}</div>
+                <div class="stat-label">Diamond Balance</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ orders|length }}</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ payment_methods|length }}</div>
+                <div class="stat-label">Payment Methods</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ current_user.freefire_id }}</div>
+                <div class="stat-label">FreeFire ID</div>
+            </div>
+        </div>
 
-            <!-- Payment Methods Summary -->
-            {% if payment_methods %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Saved Payment Methods</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        {% for method in payment_methods %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card {% if method.is_default %}border-primary{% endif %}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="card-title mb-1">
-                                                <i class="fab fa-cc-{{ method.card_type.lower() if method.card_type != 'unknown' else 'credit-card' }} me-2"></i>
-                                                {{ method.card_type|title }} •••• {{ method.last_four }}
-                                            </h6>
-                                            <p class="text-muted mb-0 small">
-                                                Expires: {{ method.expiry_month }}/{{ method.expiry_year }}
-                                                {% if method.is_default %}
-                                                <span class="badge bg-primary ms-2">Default</span>
-                                                {% endif %}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <!-- User Actions -->
+        <div class="user-actions">
+            <a href="{{ url_for('packages') }}" class="user-btn">Buy More Diamonds</a>
+            <a href="{{ url_for('payment_methods') }}" class="user-btn">Manage Payment Methods</a>
+            <button class="user-btn" id="refresh-balance">Refresh Balance</button>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="dashboard-section">
+            <h3>Recent Orders</h3>
+            {% if orders %}
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Package</th>
+                            <th>Diamonds</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Payment Method</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.package.name }}</td>
+                            <td>{{ order.diamonds }} 💎</td>
+                            <td>${{ "%.2f"|format(order.amount) }}</td>
+                            <td class="order-status-{{ order.status }}">{{ order.status|upper }}</td>
+                            <td>{{ order.payment_method or 'Credit Card' }}</td>
+                            <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        </tr>
                         {% endfor %}
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{{ url_for('payment_methods') }}" class="btn btn-outline-primary btn-sm">
-                            Manage Payment Methods
-                        </a>
-                    </div>
-                </div>
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">📦</div>
+                <h3>No Orders Yet</h3>
+                <p>You haven't made any purchases yet. Start by buying some diamonds!</p>
+                <a href="{{ url_for('packages') }}" class="btn btn-primary">Browse Packages</a>
             </div>
             {% endif %}
         </div>
+
+        <!-- Payment Methods -->
+        <div class="dashboard-section">
+            <h3>Payment Methods</h3>
+            {% if payment_methods %}
+            <div class="payment-methods-list">
+                {% for method in payment_methods %}
+                <div class="payment-method-card">
+                    <div class="method-info">
+                        <div class="card-header">
+                            <span class="card-type">{{ method.card_type|upper }}</span>
+                            {% if method.is_default %}
+                            <span class="default-badge">DEFAULT</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-number">**** **** **** {{ method.last_four }}</div>
+                        <div class="card-details">
+                            <span class="card-holder">{{ method.card_holder_name }}</span>
+                            <span class="expiry">Expires: {{ method.expiry_month }}/{{ method.expiry_year }}</span>
+                        </div>
+                    </div>
+                    <div class="method-actions">
+                        {% if not method.is_default %}
+                        <button class="user-btn set-default" data-method-id="{{ method.id }}">Set Default</button>
+                        {% endif %}
+                        <button class="user-btn danger delete-method" data-method-id="{{ method.id }}">Delete</button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">💳</div>
+                <h3>No Payment Methods</h3>
+                <p>You haven't added any payment methods yet.</p>
+                <a href="{{ url_for('payment_methods') }}" class="btn btn-primary">Add Payment Method</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Account Information -->
+        <div class="dashboard-section">
+            <h3>Account Information</h3>
+            <div class="account-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Username:</strong> {{ current_user.username }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Email:</strong> {{ current_user.email }}
+                    </div>
+                    <div class="info-item">
+                        <strong>FreeFire ID:</strong> {{ current_user.freefire_id }}
+                    </div>
+                    <div class="info-item">
+                        <strong>Member Since:</strong> {{ current_user.created_at.strftime('%B %d, %Y') }}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-{% endblock %}
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Free Fire Diamonds. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Refresh balance
+        document.getElementById('refresh-balance').addEventListener('click', function(e) {
+            e.preventDefault();
+            fetch('/api/user-balance')
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('.stat-number').textContent = data.balance;
+                    alert('Balance refreshed!');
+                });
+        });
+
+        // Set default payment method
+        document.querySelectorAll('.set-default').forEach(button => {
+            button.addEventListener('click', function() {
+                const methodId = this.getAttribute('data-method-id');
+                fetch(`/api/set-default-payment/${methodId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Default payment method updated!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                });
+            });
+        });
+
+        // Delete payment method
+        document.querySelectorAll('.delete-method').forEach(button => {
+            button.addEventListener('click', function() {
+                const methodId = this.getAttribute('data-method-id');
+                if (confirm('Are you sure you want to delete this payment method?')) {
+                    fetch(`/api/delete-payment-method/${methodId}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert('Payment method deleted!');
+                            location.reload();
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Auto-refresh balance every 60 seconds
+        setInterval(() => {
+            fetch('/api/user-balance')
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('.stat-number').textContent = data.balance;
+                });
+        }, 60000);
+    </script>
+</body>
+</html>

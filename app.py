@@ -9,17 +9,44 @@ import os
 from datetime import datetime
 from cryptography.fernet import Fernet
 import base64
+import json
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freefire_diamonds.db'
+
+# Production configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+
+# Database configuration for production/development
+if os.environ.get('RENDER'):
+    # Production database (Render provides DATABASE_URL)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+else:
+    # Development database
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freefire_diamonds.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize extensions
 db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
+
+# Naira conversion context processor
+@app.context_processor
+def utility_processor():
+    def usd_to_ngn(usd_amount):
+        """Convert USD to Naira"""
+        exchange_rate = 1500  # Current USD to NGN rate
+        naira_amount = usd_amount * exchange_rate
+        return "₦{:,.0f}".format(naira_amount)
+    
+    def format_ngn(amount):
+        """Format amount as Nigerian Naira"""
+        return "₦{:,.0f}".format(amount)
+    
+    return dict(usd_to_ngn=usd_to_ngn, format_ngn=format_ngn)
 
 # Admin required decorator
 def admin_required(f):
@@ -35,34 +62,111 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 def create_sample_data():
-    """Create sample packages and admin user"""
-    packages = [
-        DiamondPackage(name="Starter Pack", diamonds=100, price=0.99, original_price=1.99, discount=50, description="Perfect for beginners"),
-        DiamondPackage(name="Elite Pack", diamonds=500, price=4.99, original_price=6.99, discount=29, popular=True, description="Great value package"),
-        DiamondPackage(name="Pro Pack", diamonds=1200, price=9.99, original_price=14.99, discount=33, description="For serious players"),
-        DiamondPackage(name="VIP Pack", diamonds=2500, price=19.99, original_price=29.99, discount=33, popular=True, description="Best seller"),
-        DiamondPackage(name="Ultimate Pack", diamonds=5000, price=34.99, original_price=49.99, discount=30, description="Maximum diamonds"),
-        DiamondPackage(name="Mega Pack", diamonds=10000, price=64.99, original_price=89.99, discount=28, description="For ultimate gamers"),
-    ]
-    
-    for package in packages:
-        if not DiamondPackage.query.filter_by(name=package.name).first():
-            db.session.add(package)
-    
-    # Create admin user if not exists
-    if not User.query.filter_by(username='admin').first():
-        encryption_key = base64.urlsafe_b64encode(Fernet.generate_key())
-        admin_user = User(
-            username='admin',
-            email='admin@freefirediamonds.com',
-            password_hash=generate_password_hash('admin123'),
-            freefire_id='000000000',
-            encryption_key=encryption_key.decode(),
-            is_admin=True
-        )
-        db.session.add(admin_user)
-    
-    db.session.commit()
+    """Create sample packages and admin user only if they don't exist"""
+    try:
+        # Naira exchange rate
+        EXCHANGE_RATE = 1500
+        
+        packages = [
+            DiamondPackage(
+                name="Starter Pack", 
+                diamonds=100, 
+                price=0.99, 
+                original_price=1.99, 
+                discount=50, 
+                description="Perfect for beginners",
+                price_ngn=round(0.99 * EXCHANGE_RATE),
+                original_price_ngn=round(1.99 * EXCHANGE_RATE)
+            ),
+            DiamondPackage(
+                name="Elite Pack", 
+                diamonds=500, 
+                price=4.99, 
+                original_price=6.99, 
+                discount=29, 
+                popular=True, 
+                description="Great value package",
+                price_ngn=round(4.99 * EXCHANGE_RATE),
+                original_price_ngn=round(6.99 * EXCHANGE_RATE)
+            ),
+            DiamondPackage(
+                name="Pro Pack", 
+                diamonds=1200, 
+                price=9.99, 
+                original_price=14.99, 
+                discount=33, 
+                description="For serious players",
+                price_ngn=round(9.99 * EXCHANGE_RATE),
+                original_price_ngn=round(14.99 * EXCHANGE_RATE)
+            ),
+            DiamondPackage(
+                name="VIP Pack", 
+                diamonds=2500, 
+                price=19.99, 
+                original_price=29.99, 
+                discount=33, 
+                popular=True, 
+                description="Best seller",
+                price_ngn=round(19.99 * EXCHANGE_RATE),
+                original_price_ngn=round(29.99 * EXCHANGE_RATE)
+            ),
+            DiamondPackage(
+                name="Ultimate Pack", 
+                diamonds=5000, 
+                price=34.99, 
+                original_price=49.99, 
+                discount=30, 
+                description="Maximum diamonds",
+                price_ngn=round(34.99 * EXCHANGE_RATE),
+                original_price_ngn=round(49.99 * EXCHANGE_RATE)
+            ),
+            DiamondPackage(
+                name="Mega Pack", 
+                diamonds=10000, 
+                price=64.99, 
+                original_price=89.99, 
+                discount=28, 
+                description="For ultimate gamers",
+                price_ngn=round(64.99 * EXCHANGE_RATE),
+                original_price_ngn=round(89.99 * EXCHANGE_RATE)
+            ),
+        ]
+        
+        for package in packages:
+            if not DiamondPackage.query.filter_by(name=package.name).first():
+                db.session.add(package)
+        
+        # Create admin user if not exists
+        if not User.query.filter_by(username='admin').first():
+            encryption_key = base64.urlsafe_b64encode(Fernet.generate_key())
+            admin_user = User(
+                username='admin',
+                email='admin@freefirediamonds.com',
+                password_hash=generate_password_hash('admin123'),
+                freefire_id='000000000',
+                encryption_key=encryption_key.decode(),
+                is_admin=True
+            )
+            db.session.add(admin_user)
+        
+        # Create demo user if not exists
+        if not User.query.filter_by(username='demo').first():
+            demo_key = base64.urlsafe_b64encode(Fernet.generate_key())
+            demo_user = User(
+                username='demo',
+                email='demo@example.com',
+                password_hash=generate_password_hash('password123'),
+                freefire_id='123456789',
+                encryption_key=demo_key.decode()
+            )
+            db.session.add(demo_user)
+        
+        db.session.commit()
+        print("✅ Sample data created successfully")
+        
+    except Exception as e:
+        print(f"❌ Error creating sample data: {e}")
+        db.session.rollback()
 
 # Routes
 @app.route('/')
@@ -163,12 +267,16 @@ def payment_methods():
 @login_required
 def add_payment_method():
     try:
-        card_holder_name = request.json.get('card_holder_name')
-        card_number = request.json.get('card_number').replace(' ', '')
-        expiry_month = int(request.json.get('expiry_month'))
-        expiry_year = int(request.json.get('expiry_year'))
-        cvv = request.json.get('cvv')
-        save_card = request.json.get('save_card', False)
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No JSON data received'})
+            
+        card_holder_name = data.get('card_holder_name')
+        card_number = data.get('card_number', '').replace(' ', '')
+        expiry_month = int(data.get('expiry_month'))
+        expiry_year = int(data.get('expiry_year'))
+        cvv = data.get('cvv')
+        save_card = data.get('save_card', False)
         
         is_valid, message = payment_processor.validate_card(card_number, expiry_month, expiry_year, cvv)
         if not is_valid:
@@ -184,11 +292,14 @@ def add_payment_method():
                 last_four=last_four,
                 expiry_month=expiry_month,
                 expiry_year=expiry_year,
-                card_holder_name=card_holder_name,
-                card_number=card_number,
-                cvv=cvv
+                card_holder_name=card_holder_name
             )
             
+            # Set temporary properties for encryption
+            payment_method.card_number = card_number
+            payment_method.cvv = cvv
+            
+            # Encrypt the sensitive data
             payment_method.encrypt_data(current_user.encryption_key.encode())
             
             existing_methods = PaymentMethod.query.filter_by(user_id=current_user.id).count()
@@ -245,9 +356,13 @@ def delete_payment_method(method_id):
 @login_required
 def create_order():
     try:
-        package_id = request.json.get('package_id')
-        payment_method_id = request.json.get('payment_method_id')
-        use_saved_card = request.json.get('use_saved_card', False)
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No JSON data received'})
+            
+        package_id = data.get('package_id')
+        payment_method_id = data.get('payment_method_id')
+        use_saved_card = data.get('use_saved_card', False)
         
         package = DiamondPackage.query.get_or_404(package_id)
         
@@ -299,19 +414,36 @@ def user_balance():
     return jsonify({'balance': current_user.balance})
 
 # Admin Routes
+# In the admin_dashboard route, add this before the return statement:
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
     users = User.query.all()
     payment_methods = PaymentMethod.query.all()
     orders = Order.query.order_by(Order.created_at.desc()).limit(50).all()
-    stats = ResearchTools.get_system_stats()
+    
+    # Get stats with safe defaults
+    try:
+        stats = ResearchTools.get_system_stats()
+    except Exception as e:
+        print(f"Error getting stats: {e}")
+        stats = {
+            'total_users': len(users),
+            'total_orders': len(orders),
+            'total_revenue': 0,
+            'total_payment_methods': len(payment_methods),
+            'completed_orders': 0,
+            'pending_orders': 0,
+            'avg_order_value': 0,
+            'total_diamonds_sold': 0
+        }
     
     return render_template('admin_dashboard.html', 
                          users=users, 
                          payment_methods=payment_methods, 
                          orders=orders,
                          stats=stats)
+
 
 @app.route('/admin/payment-data')
 @admin_required
@@ -393,8 +525,23 @@ def admin_all_users_analytics():
     analytics = ResearchTools.get_user_analytics()
     return jsonify(analytics)
 
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return render_template('500.html'), 500
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    return render_template('403.html'), 403
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_sample_data()
-    app.run(debug=True)
+    # Enable debug for development
+    app.run(debug=True, host='0.0.0.0', port=5000)
