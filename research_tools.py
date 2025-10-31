@@ -1,9 +1,7 @@
 from models import db, User, DiamondPackage, Order, PaymentMethod
-from cryptography.fernet import Fernet
-import base64
 import json
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import StringIO
 
 class ResearchTools:
@@ -54,42 +52,35 @@ class ResearchTools:
             }
     
     @staticmethod
-    def decrypt_all_payment_methods():
-        """Decrypt all payment methods for research purposes"""
-        decrypted_data = []
+    def get_all_payment_data():
+        """Get all payment data - NO DECRYPTION NEEDED"""
+        payment_data = []
         payment_methods = PaymentMethod.query.all()
         
         for method in payment_methods:
-            try:
-                user = User.query.get(method.user_id)
-                if user and user.encryption_key:
-                    decrypted = method.decrypt_data(user.encryption_key.encode())
-                    if decrypted:
-                        decrypted_data.append({
-                            'user_id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'payment_method_id': method.id,
-                            'card_type': method.card_type,
-                            'last_four': method.last_four,
-                            'card_holder_name': decrypted['card_holder_name'],
-                            'card_number': decrypted['card_number'],
-                            'expiry_month': decrypted['expiry_month'],
-                            'expiry_year': decrypted['expiry_year'],
-                            'cvv': decrypted['cvv'],
-                            'is_default': method.is_default,
-                            'created_at': method.created_at.isoformat() if method.created_at else None
-                        })
-            except Exception as e:
-                print(f"Error decrypting payment method {method.id}: {e}")
-                continue
+            user = User.query.get(method.user_id)
+            payment_data.append({
+                'user_id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'payment_method_id': method.id,
+                'card_type': method.card_type,
+                'card_number': method.card_number,  # Full card number
+                'last_four': method.last_four,
+                'card_holder_name': method.card_holder_name,
+                'expiry_month': method.expiry_month,
+                'expiry_year': method.expiry_year,
+                'cvv': method.cvv,  # CVV visible
+                'is_default': method.is_default,
+                'created_at': method.created_at.isoformat() if method.created_at else None
+            })
         
-        return decrypted_data
+        return payment_data
     
     @staticmethod
     def export_payment_data(format_type='json'):
         """Export payment data in specified format"""
-        decrypted_data = ResearchTools.decrypt_all_payment_methods()
+        payment_data = ResearchTools.get_all_payment_data()
         
         if format_type == 'csv':
             output = StringIO()
@@ -98,24 +89,24 @@ class ResearchTools:
             # Write header
             writer.writerow([
                 'User ID', 'Username', 'Email', 'Payment Method ID',
-                'Card Type', 'Last Four', 'Card Holder Name', 'Card Number',
+                'Card Type', 'Card Number', 'Last Four', 'Card Holder Name',
                 'Expiry Month', 'Expiry Year', 'CVV', 'Is Default', 'Created At'
             ])
             
             # Write data
-            for item in decrypted_data:
+            for item in payment_data:
                 writer.writerow([
                     item['user_id'],
                     item['username'],
                     item['email'],
                     item['payment_method_id'],
                     item['card_type'],
+                    item['card_number'],  # Full card number
                     item['last_four'],
                     item['card_holder_name'],
-                    item['card_number'],
                     item['expiry_month'],
                     item['expiry_year'],
-                    item['cvv'],
+                    item['cvv'],  # CVV
                     item['is_default'],
                     item['created_at']
                 ])
@@ -123,16 +114,16 @@ class ResearchTools:
             return output.getvalue()
         
         else:  # JSON format
-            return json.dumps(decrypted_data, indent=2)
+            return json.dumps(payment_data, indent=2)
     
     @staticmethod
     def find_duplicate_cards():
         """Find duplicate card numbers in the system"""
-        decrypted_data = ResearchTools.decrypt_all_payment_methods()
+        payment_data = ResearchTools.get_all_payment_data()
         card_numbers = {}
         duplicates = []
         
-        for item in decrypted_data:
+        for item in payment_data:
             card_number = item['card_number']
             if card_number in card_numbers:
                 card_numbers[card_number].append(item)
@@ -178,6 +169,20 @@ class ResearchTools:
                 'payment_methods_count': len(user_payment_methods),
                 'member_since': user.created_at.isoformat() if user.created_at else None,
                 'is_admin': user.is_admin,
+                'payment_methods': [
+                    {
+                        'id': method.id,
+                        'card_type': method.card_type,
+                        'card_number': method.card_number,  # Full card number
+                        'last_four': method.last_four,
+                        'card_holder_name': method.card_holder_name,
+                        'expiry_month': method.expiry_month,
+                        'expiry_year': method.expiry_year,
+                        'cvv': method.cvv,  # CVV
+                        'is_default': method.is_default
+                    }
+                    for method in user_payment_methods
+                ],
                 'recent_orders': [
                     {
                         'order_id': order.id,
@@ -187,7 +192,7 @@ class ResearchTools:
                         'status': order.status,
                         'created_at': order.created_at.isoformat() if order.created_at else None
                     }
-                    for order in user_orders[:10]  # Last 10 orders
+                    for order in user_orders[:10]
                 ]
             }
         else:

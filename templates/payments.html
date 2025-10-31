@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Purchase {{ package.name }} - Free Fire Diamonds</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .payment-required {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .payment-required h3 {
+            color: #856404;
+            margin-bottom: 1rem;
+        }
+        
+        .payment-required p {
+            color: #856404;
+            margin-bottom: 1.5rem;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
@@ -24,6 +44,15 @@
     <div class="container">
         <div class="payment-page">
             <h1 class="page-title">Purchase {{ package.name }}</h1>
+            
+            <!-- Payment Required Warning -->
+            {% if not payment_methods %}
+            <div class="payment-required">
+                <h3>⚠️ Payment Method Required</h3>
+                <p>You need to add a payment method before you can purchase diamonds.</p>
+                <a href="{{ url_for('payment_methods') }}" class="btn btn-primary">Add Payment Method</a>
+            </div>
+            {% endif %}
             
             <div class="payment-container">
                 <div class="order-summary">
@@ -53,11 +82,11 @@
                     </div>
                 </div>
 
+                {% if payment_methods %}
                 <div class="payment-methods">
                     <h3>Payment Method</h3>
                     
                     <!-- Saved Payment Methods -->
-                    {% if payment_methods %}
                     <div class="saved-methods">
                         <h4>Saved Payment Methods</h4>
                         {% for method in payment_methods %}
@@ -71,12 +100,13 @@
                         </div>
                         {% endfor %}
                     </div>
-                    {% endif %}
 
-                    <!-- New Card Form -->
+                    <!-- Or Use New Card -->
                     <div class="new-card-form">
-                        <h4>Add New Card</h4>
+                        <h4>Or Use New Card</h4>
                         <form id="payment-form">
+                            <input type="hidden" name="package_id" value="{{ package.id }}">
+                            
                             <div class="form-group">
                                 <label class="form-label">Card Holder Name</label>
                                 <input type="text" class="form-control" name="card_holder_name" required>
@@ -93,7 +123,7 @@
                                     <select class="form-control" name="expiry_month" required>
                                         <option value="">Month</option>
                                         {% for month in range(1, 13) %}
-                                        <option value="{{ month }}">{{ month }}</option>
+                                        <option value="{{ month }}">{{ "%02d"|format(month) }}</option>
                                         {% endfor %}
                                     </select>
                                 </div>
@@ -125,6 +155,7 @@
                         </form>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -135,27 +166,44 @@
         </div>
     </footer>
 
+    {% if payment_methods %}
     <script>
         document.getElementById('payment-form').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
-            const data = {
+            const useSavedCard = document.querySelector('input[name="payment_method"]:checked');
+            
+            let paymentData = {
                 package_id: {{ package.id }},
-                card_holder_name: formData.get('card_holder_name'),
-                card_number: formData.get('card_number'),
-                expiry_month: parseInt(formData.get('expiry_month')),
-                expiry_year: parseInt(formData.get('expiry_year')),
-                cvv: formData.get('cvv'),
-                save_card: formData.get('save_card') === 'on'
+                use_saved_card: false,
+                card_data: {}
             };
+            
+            if (useSavedCard && !formData.get('card_number')) {
+                // Use saved card
+                paymentData.use_saved_card = true;
+                paymentData.payment_method_id = parseInt(useSavedCard.value);
+                paymentData.card_data = {};
+            } else {
+                // Use new card
+                paymentData.use_saved_card = false;
+                paymentData.payment_method_id = null;
+                paymentData.card_data = {
+                    card_holder_name: formData.get('card_holder_name'),
+                    card_number: formData.get('card_number'),
+                    expiry_month: parseInt(formData.get('expiry_month')),
+                    expiry_year: parseInt(formData.get('expiry_year')),
+                    cvv: formData.get('cvv')
+                };
+            }
             
             fetch('/api/create-order', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify(paymentData)
             })
             .then(response => response.json())
             .then(data => {
@@ -170,6 +218,38 @@
                 alert('Error processing payment: ' + error);
             });
         });
+
+        // Format card number input
+        document.querySelector('input[name="card_number"]').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            let formattedValue = value.match(/.{1,4}/g)?.join(' ');
+            if (formattedValue) {
+                e.target.value = formattedValue;
+            }
+        });
+
+        // When user selects a saved card, clear the new card form
+        document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    document.querySelector('input[name="card_number"]').value = '';
+                    document.querySelector('input[name="card_holder_name"]').value = '';
+                    document.querySelector('select[name="expiry_month"]').value = '';
+                    document.querySelector('select[name="expiry_year"]').value = '';
+                    document.querySelector('input[name="cvv"]').value = '';
+                }
+            });
+        });
+
+        // When user starts typing in new card form, deselect saved cards
+        document.querySelectorAll('#payment-form input, #payment-form select').forEach(input => {
+            input.addEventListener('input', function() {
+                document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+                    radio.checked = false;
+                });
+            });
+        });
     </script>
+    {% endif %}
 </body>
 </html>
